@@ -23,6 +23,22 @@ function extractText(data) {
     .join('');
 }
 
+function extractUsage(data) {
+  const meta = data?.usageMetadata ?? {};
+  const inputTokens = meta.promptTokenCount ?? null;
+  const totalTokens = meta.totalTokenCount ?? null;
+  const outputTokens =
+    totalTokens != null && inputTokens != null
+      ? Math.max(0, totalTokens - inputTokens)
+      : (meta.candidatesTokenCount ?? null);
+
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: totalTokens ?? (inputTokens != null && outputTokens != null ? inputTokens + outputTokens : null),
+  };
+}
+
 function createGeminiProvider() {
   return {
     name: 'gemini',
@@ -52,16 +68,25 @@ function createGeminiProvider() {
       }
 
       const data = await response.json();
+      const usage = extractUsage(data);
       if (!response.ok) {
-        throw createError(data?.error?.message || `AI request failed (${response.status})`, 502);
+        const error = createError(data?.error?.message || `AI request failed (${response.status})`, 502);
+        error.provider = 'gemini';
+        error.model = model;
+        error.usage = usage;
+        throw error;
       }
 
       const text = extractText(data);
       if (!text) {
-        throw createError('AI returned an empty response', 502);
+        const error = createError('AI returned an empty response', 502);
+        error.provider = 'gemini';
+        error.model = model;
+        error.usage = usage;
+        throw error;
       }
 
-      return { provider: 'gemini', model, text };
+      return { provider: 'gemini', model, text, usage };
     },
   };
 }

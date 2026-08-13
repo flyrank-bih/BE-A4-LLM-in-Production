@@ -44,16 +44,29 @@ function createGroqProvider() {
       }
 
       const data = await response.json();
+      const usage = {
+        inputTokens: data?.usage?.prompt_tokens ?? null,
+        outputTokens: data?.usage?.completion_tokens ?? null,
+        totalTokens: data?.usage?.total_tokens ?? null,
+      };
       if (!response.ok) {
-        throw createError(data?.error?.message || `AI request failed (${response.status})`, 502);
+        const error = createError(data?.error?.message || `AI request failed (${response.status})`, 502);
+        error.provider = 'groq';
+        error.model = model;
+        error.usage = usage;
+        throw error;
       }
 
       const text = data?.choices?.[0]?.message?.content ?? '';
       if (!text) {
-        throw createError('AI returned an empty response', 502);
+        const error = createError('AI returned an empty response', 502);
+        error.provider = 'groq';
+        error.model = model;
+        error.usage = usage;
+        throw error;
       }
 
-      return { provider: 'groq', model, text };
+      return { provider: 'groq', model, text, usage };
     },
   };
 }

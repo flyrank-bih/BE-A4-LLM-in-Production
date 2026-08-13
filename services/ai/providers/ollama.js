@@ -36,16 +36,31 @@ function createOllamaProvider() {
       }
 
       const data = await response.json();
+      const inputTokens = data?.prompt_eval_count ?? null;
+      const outputTokens = data?.eval_count ?? null;
+      const usage = {
+        inputTokens,
+        outputTokens,
+        totalTokens: inputTokens != null && outputTokens != null ? inputTokens + outputTokens : null,
+      };
       if (!response.ok) {
-        throw createError(data?.error || `AI request failed (${response.status})`, 502);
+        const error = createError(data?.error || `AI request failed (${response.status})`, 502);
+        error.provider = 'ollama';
+        error.model = model;
+        error.usage = usage;
+        throw error;
       }
 
       const text = data?.response ?? '';
       if (!text) {
-        throw createError('AI returned an empty response', 502);
+        const error = createError('AI returned an empty response', 502);
+        error.provider = 'ollama';
+        error.model = model;
+        error.usage = usage;
+        throw error;
       }
 
-      return { provider: 'ollama', model, text };
+      return { provider: 'ollama', model, text, usage };
     },
   };
 }

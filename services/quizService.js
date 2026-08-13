@@ -1,6 +1,7 @@
 // Quiz service — builds the prompt, asks the AI abstraction, then validates the result.
 const { generate } = require('./ai');
 const { OPTIONS_COUNT, parseQuizJson } = require('./quizSchema');
+const { emptyUsage, logQuizUsage } = require('./ai/usage');
 
 function buildQuizPrompt({ topic, difficulty, amount }) {
   return [
@@ -15,20 +16,54 @@ function buildQuizPrompt({ topic, difficulty, amount }) {
 }
 
 async function createQuiz({ topic, difficulty, amount }) {
-  const { text, model, provider } = await generate({
-    prompt: buildQuizPrompt({ topic, difficulty, amount }),
-    json: true,
-  });
+  const attempt = 1;
+  const startedAt = Date.now();
+  let provider;
+  let model;
+  let usage = emptyUsage();
 
-  const quiz = parseQuizJson(text, amount);
+  try {
+    const result = await generate({
+      prompt: buildQuizPrompt({ topic, difficulty, amount }),
+      json: true,
+    });
 
-  return {
-    topic,
-    difficulty,
-    questions: quiz.questions,
-    provider,
-    model,
-  };
+    provider = result.provider;
+    model = result.model;
+    usage = result.usage || emptyUsage();
+
+    const quiz = parseQuizJson(result.text, amount);
+
+    logQuizUsage({
+      success: true,
+      provider,
+      model,
+      questions: quiz.questions.length,
+      usage,
+      durationMs: Date.now() - startedAt,
+      attempt,
+    });
+
+    return {
+      topic,
+      difficulty,
+      questions: quiz.questions,
+      provider,
+      model,
+    };
+  } catch (err) {
+    logQuizUsage({
+      success: false,
+      provider: err.provider || provider,
+      model: err.model || model,
+      questions: amount,
+      usage: err.usage || usage,
+      durationMs: Date.now() - startedAt,
+      attempt,
+      error: err.message,
+    });
+    throw err;
+  }
 }
 
 module.exports = { createQuiz };
