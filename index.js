@@ -154,13 +154,12 @@ app.post('/quiz', async (req, res) => {
   }
 
   try {
-    const { model, text } = await generateQuiz(parsed.value);
+    const { model, questions } = await generateQuiz(parsed.value);
     res.json({
       topic: parsed.value.topic,
       difficulty: parsed.value.difficulty,
-      amount: parsed.value.amount,
+      questions,
       model,
-      quiz: text,
     });
   } catch (err) {
     const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 502;

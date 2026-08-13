@@ -313,7 +313,7 @@
             }
           },
           "502": {
-            "description": "Gemini request failed or returned an empty response",
+            "description": "Gemini request failed, or the quiz JSON failed validation",
             "content": {
               "application/json": {
                 "schema": {
@@ -471,9 +471,32 @@
           }
         }
       },
+      "QuizQuestion": {
+        "type": "object",
+        "required": ["question", "options", "correctAnswer"],
+        "properties": {
+          "question": {
+            "type": "string",
+            "example": "What keyword declares a block-scoped variable in JavaScript?"
+          },
+          "options": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "string"
+            },
+            "example": ["var", "let", "const", "define"]
+          },
+          "correctAnswer": {
+            "type": "string",
+            "example": "let"
+          }
+        }
+      },
       "Quiz": {
         "type": "object",
-        "required": ["topic", "difficulty", "amount", "model", "quiz"],
+        "required": ["topic", "difficulty", "questions"],
         "properties": {
           "topic": {
             "type": "string",
@@ -481,19 +504,17 @@
           },
           "difficulty": {
             "type": "string",
-            "example": "easy"
+            "example": "medium"
           },
-          "amount": {
-            "type": "integer",
-            "example": 5
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestion"
+            }
           },
           "model": {
             "type": "string",
             "example": "gemini-3.5-flash"
-          },
-          "quiz": {
-            "type": "string",
-            "example": "1. What keyword declares a block-scoped variable?\nAnswer: let"
           }
         }
       },
