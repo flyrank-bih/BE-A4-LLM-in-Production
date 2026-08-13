@@ -5,7 +5,7 @@ const express = require('express');
 const Database = require('better-sqlite3'); // sync SQLite driver (no async/await needed)
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./openapi.json');
-const { generateText } = require('./services/ai');
+const { generateText, generateQuiz } = require('./services/ai');
 const app = express();
 const port = 3000;
 
@@ -86,7 +86,7 @@ app.get('/', (req, res) => {
   res.json({
     name: 'Task API',
     version: '1.0',
-    endpoints: ['/tasks', '/stats', '/reset', '/trivia/question'],
+    endpoints: ['/tasks', '/stats', '/reset', '/trivia/question', '/quiz'],
   });
 });
 
@@ -103,6 +103,65 @@ app.get('/trivia/question', async (req, res) => {
   try {
     const { model, text } = await generateText(prompt);
     res.json({ prompt, model, text });
+  } catch (err) {
+    const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 502;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+const QUIZ_DIFFICULTIES = ['easy', 'medium', 'hard'];
+const QUIZ_AMOUNT_MIN = 1;
+const QUIZ_AMOUNT_MAX = 10;
+
+function validateQuizRequest(body) {
+  const { topic, difficulty, amount } = body ?? {};
+
+  if (topic === undefined || topic === null || String(topic).trim() === '') {
+    return { error: 'topic is required and cannot be empty' };
+  }
+  if (typeof topic !== 'string') {
+    return { error: 'topic must be a string' };
+  }
+
+  if (difficulty === undefined || difficulty === null || String(difficulty).trim() === '') {
+    return { error: 'difficulty is required' };
+  }
+  const normalizedDifficulty = String(difficulty).trim().toLowerCase();
+  if (!QUIZ_DIFFICULTIES.includes(normalizedDifficulty)) {
+    return { error: `difficulty must be one of: ${QUIZ_DIFFICULTIES.join(', ')}` };
+  }
+
+  if (amount === undefined || amount === null) {
+    return { error: 'amount is required' };
+  }
+  if (!Number.isInteger(amount) || amount < QUIZ_AMOUNT_MIN || amount > QUIZ_AMOUNT_MAX) {
+    return { error: `amount must be an integer between ${QUIZ_AMOUNT_MIN} and ${QUIZ_AMOUNT_MAX}` };
+  }
+
+  return {
+    value: {
+      topic: topic.trim(),
+      difficulty: normalizedDifficulty,
+      amount,
+    },
+  };
+}
+
+app.post('/quiz', async (req, res) => {
+  const parsed = validateQuizRequest(req.body);
+  if (parsed.error) {
+    return res.status(400).json({ error: parsed.error });
+  }
+
+  try {
+    const { model, text } = await generateQuiz(parsed.value);
+    res.json({
+      topic: parsed.value.topic,
+      difficulty: parsed.value.difficulty,
+      amount: parsed.value.amount,
+      model,
+      quiz: text,
+    });
   } catch (err) {
     const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 502;
     res.status(status).json({ error: err.message });

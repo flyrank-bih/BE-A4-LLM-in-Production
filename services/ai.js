@@ -63,4 +63,14 @@ async function generateText(prompt) {
   return { model, text };
 }
 
-module.exports = { generateText };
+async function generateQuiz({ topic, difficulty, amount }) {
+  const prompt = [
+    `Generate ${amount} ${difficulty} trivia questions about ${topic}.`,
+    'Number each question.',
+    'For every question, include the question text and the correct answer.',
+  ].join(' ');
+
+  return generateText(prompt);
+}
+
+module.exports = { generateText, generateQuiz };

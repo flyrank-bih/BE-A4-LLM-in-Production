@@ -249,6 +249,82 @@
         }
       }
     },
+    "/quiz": {
+      "post": {
+        "summary": "Generate a trivia quiz",
+        "operationId": "createQuiz",
+        "description": "Validates topic, difficulty, and amount, then asks Gemini to generate a quiz.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateQuizRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated quiz",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quiz"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "missingTopic": {
+                    "value": {
+                      "error": "topic is required and cannot be empty"
+                    }
+                  },
+                  "invalidDifficulty": {
+                    "value": {
+                      "error": "difficulty must be one of: easy, medium, hard"
+                    }
+                  },
+                  "invalidAmount": {
+                    "value": {
+                      "error": "amount must be an integer between 1 and 10"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server is missing Gemini configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Gemini request failed or returned an empty response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/trivia/question": {
       "get": {
         "summary": "Generate one JavaScript trivia question",
@@ -371,6 +447,53 @@
         "properties": {
           "error": {
             "type": "string"
+          }
+        }
+      },
+      "CreateQuizRequest": {
+        "type": "object",
+        "required": ["topic", "difficulty", "amount"],
+        "properties": {
+          "topic": {
+            "type": "string",
+            "example": "JavaScript"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": ["easy", "medium", "hard"],
+            "example": "easy"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "example": 5
+          }
+        }
+      },
+      "Quiz": {
+        "type": "object",
+        "required": ["topic", "difficulty", "amount", "model", "quiz"],
+        "properties": {
+          "topic": {
+            "type": "string",
+            "example": "JavaScript"
+          },
+          "difficulty": {
+            "type": "string",
+            "example": "easy"
+          },
+          "amount": {
+            "type": "integer",
+            "example": 5
+          },
+          "model": {
+            "type": "string",
+            "example": "gemini-3.5-flash"
+          },
+          "quiz": {
+            "type": "string",
+            "example": "1. What keyword declares a block-scoped variable?\nAnswer: let"
           }
         }
       },
