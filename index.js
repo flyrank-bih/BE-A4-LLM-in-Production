@@ -85,9 +85,13 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapi));
 // ---------------------------------------------------------------------------
 app.get('/', (req, res) => {
   res.json({
-    name: 'Task API',
+    name: 'Task & Trivia API',
     version: '1.0',
-    endpoints: ['/tasks', '/stats', '/reset', '/trivia/question', '/quiz'],
+    docs: '/docs',
+    endpoints: {
+      tasks: ['GET /tasks', 'GET /tasks/:id', 'POST /tasks', 'PUT /tasks/:id', 'DELETE /tasks/:id'],
+      trivia: ['POST /quiz'],
+    },
   });
 });
 

@@ -1,18 +1,29 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Task API",
+    "title": "Task & Trivia API",
     "version": "1.0",
-    "description": "SQLite-backed CRUD API for tasks."
+    "description": "SQLite-backed task CRUD plus an AI-generated trivia quiz.\n\n**Task API**\n- `GET /tasks`\n- `GET /tasks/{id}`\n- `POST /tasks`\n- `PUT /tasks/{id}`\n- `DELETE /tasks/{id}`\n\n**Trivia API**\n- `POST /quiz`"
   },
   "servers": [
     {
       "url": "http://localhost:3000"
     }
   ],
+  "tags": [
+    {
+      "name": "Task API",
+      "description": "Create, read, update, and delete tasks stored in SQLite."
+    },
+    {
+      "name": "Trivia API",
+      "description": "Generate a structured multiple-choice quiz through the configured AI provider."
+    }
+  ],
   "paths": {
     "/tasks": {
       "get": {
+        "tags": ["Task API"],
         "summary": "List tasks",
         "operationId": "listTasks",
         "parameters": [
@@ -61,6 +72,7 @@
         }
       },
       "post": {
+        "tags": ["Task API"],
         "summary": "Create a task",
         "operationId": "createTask",
         "requestBody": {
@@ -114,6 +126,7 @@
         }
       ],
       "get": {
+        "tags": ["Task API"],
         "summary": "Get one task",
         "operationId": "getTask",
         "responses": {
@@ -143,6 +156,7 @@
         }
       },
       "put": {
+        "tags": ["Task API"],
         "summary": "Update a task",
         "operationId": "updateTask",
         "requestBody": {
@@ -209,6 +223,7 @@
         }
       },
       "delete": {
+        "tags": ["Task API"],
         "summary": "Delete a task",
         "operationId": "deleteTask",
         "responses": {
@@ -233,6 +248,7 @@
     },
     "/stats": {
       "get": {
+        "tags": ["Task API"],
         "summary": "Task counts",
         "operationId": "getStats",
         "responses": {
@@ -251,32 +267,51 @@
     },
     "/quiz": {
       "post": {
+        "tags": ["Trivia API"],
         "summary": "Generate a trivia quiz",
         "operationId": "createQuiz",
-        "description": "Validates topic, difficulty, and amount, then asks Gemini to generate a quiz.",
+        "description": "Validates the request, asks the configured AI provider for a structured quiz, then returns the quiz only if the response passes schema validation.\n\n**Request rules**\n- `topic` is required and cannot be empty\n- `difficulty` must be `easy`, `medium`, or `hard`\n- `amount` must be an integer from 1 to 10\n\nInvalid requests return `400` and never call the AI provider.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateQuizRequest"
+              },
+              "example": {
+                "topic": "JavaScript",
+                "difficulty": "easy",
+                "amount": 5
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Generated quiz",
+            "description": "Validated quiz from the AI provider",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Quiz"
+                },
+                "example": {
+                  "topic": "JavaScript",
+                  "difficulty": "easy",
+                  "questions": [
+                    {
+                      "question": "Which keyword declares a constant in JavaScript?",
+                      "options": ["var", "let", "const", "constant"],
+                      "correctAnswer": "const"
+                    }
+                  ],
+                  "provider": "gemini",
+                  "model": "gemini-3.5-flash"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid request body",
+            "description": "Invalid request body. The AI provider is not called.",
             "content": {
               "application/json": {
                 "schema": {
@@ -284,16 +319,19 @@
                 },
                 "examples": {
                   "missingTopic": {
+                    "summary": "Missing topic",
                     "value": {
                       "error": "topic is required and cannot be empty"
                     }
                   },
                   "invalidDifficulty": {
+                    "summary": "Unsupported difficulty",
                     "value": {
                       "error": "difficulty must be one of: easy, medium, hard"
                     }
                   },
                   "invalidAmount": {
+                    "summary": "Amount outside 1–10",
                     "value": {
                       "error": "amount must be an integer between 1 and 10"
                     }
@@ -303,46 +341,7 @@
             }
           },
           "500": {
-            "description": "Server is missing Gemini configuration",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Gemini request failed, or the quiz JSON failed validation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/trivia/question": {
-      "get": {
-        "summary": "Generate one JavaScript trivia question",
-        "operationId": "getTriviaQuestion",
-        "description": "Sends a fixed prompt to Gemini and returns the model text. Used to prove the AI provider connection.",
-        "responses": {
-          "200": {
-            "description": "Gemini generated a trivia question",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TriviaQuestion"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Server is missing Gemini configuration",
+            "description": "Server is missing AI provider configuration, such as an API key",
             "content": {
               "application/json": {
                 "schema": {
@@ -355,7 +354,62 @@
             }
           },
           "502": {
-            "description": "Gemini request failed or returned an empty response",
+            "description": "The AI provider failed, or the quiz JSON failed validation (malformed JSON, missing fields, wrong option count, or wrong number of questions)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "invalidJson": {
+                    "value": {
+                      "error": "AI returned invalid JSON"
+                    }
+                  },
+                  "invalidShape": {
+                    "value": {
+                      "error": "AI quiz failed validation: quiz must contain exactly 5 questions"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trivia/question": {
+      "get": {
+        "tags": ["Trivia API"],
+        "summary": "Generate one JavaScript trivia question",
+        "operationId": "getTriviaQuestion",
+        "description": "Sends a fixed prompt through the AI provider abstraction and returns the model text. Used to prove the provider connection.",
+        "responses": {
+          "200": {
+            "description": "The AI provider generated a trivia question",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriviaQuestion"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server is missing AI provider configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "GEMINI_API_KEY is not set"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "AI request failed or returned an empty response",
             "content": {
               "application/json": {
                 "schema": {
@@ -369,6 +423,7 @@
     },
     "/reset": {
       "post": {
+        "tags": ["Task API"],
         "summary": "Reset to seed data",
         "operationId": "resetTasks",
         "responses": {
@@ -456,17 +511,21 @@
         "properties": {
           "topic": {
             "type": "string",
+            "minLength": 1,
+            "description": "Subject of the quiz. Required and cannot be empty.",
             "example": "JavaScript"
           },
           "difficulty": {
             "type": "string",
             "enum": ["easy", "medium", "hard"],
+            "description": "Supported values: easy, medium, hard.",
             "example": "easy"
           },
           "amount": {
             "type": "integer",
             "minimum": 1,
             "maximum": 10,
+            "description": "Number of questions to generate. Must be an integer from 1 to 10.",
             "example": 5
           }
         }
