@@ -5,7 +5,8 @@ const express = require('express');
 const Database = require('better-sqlite3'); // sync SQLite driver (no async/await needed)
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./openapi.json');
-const { generateText, generateQuiz } = require('./services/ai');
+const { generate } = require('./services/ai');
+const { createQuiz } = require('./services/quizService');
 const app = express();
 const port = 3000;
 
@@ -95,14 +96,14 @@ app.get('/health', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Trivia — prove the API → AI service → Gemini → response path.
+// Trivia — prove the API → AI abstraction → provider → response path.
 // ---------------------------------------------------------------------------
 app.get('/trivia/question', async (req, res) => {
   const prompt = 'Generate one trivia question about JavaScript.';
 
   try {
-    const { model, text } = await generateText(prompt);
-    res.json({ prompt, model, text });
+    const { provider, model, text } = await generate({ prompt });
+    res.json({ prompt, provider, model, text });
   } catch (err) {
     const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 502;
     res.status(status).json({ error: err.message });
@@ -154,13 +155,8 @@ app.post('/quiz', async (req, res) => {
   }
 
   try {
-    const { model, questions } = await generateQuiz(parsed.value);
-    res.json({
-      topic: parsed.value.topic,
-      difficulty: parsed.value.difficulty,
-      questions,
-      model,
-    });
+    const quiz = await createQuiz(parsed.value);
+    res.json(quiz);
   } catch (err) {
     const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 502;
     res.status(status).json({ error: err.message });

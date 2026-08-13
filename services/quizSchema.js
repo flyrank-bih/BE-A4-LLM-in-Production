@@ -1,4 +1,4 @@
-// Quiz schema — the shape we accept from Gemini. JSON.parse alone is not enough.
+// Quiz schema — the shape we accept from any AI provider. JSON.parse alone is not enough.
 const { z } = require('zod');
 
 const OPTIONS_COUNT = 4;
@@ -42,14 +42,14 @@ function parseQuizJson(text, amount) {
   try {
     parsed = JSON.parse(unwrapJsonText(text));
   } catch {
-    const error = new Error('Gemini returned invalid JSON');
+    const error = new Error('AI returned invalid JSON');
     error.status = 502;
     throw error;
   }
 
   const result = createQuizSchema(amount).safeParse(parsed);
   if (!result.success) {
-    const error = new Error(`Gemini quiz failed validation: ${formatQuizIssues(result.error)}`);
+    const error = new Error(`AI quiz failed validation: ${formatQuizIssues(result.error)}`);
     error.status = 502;
     throw error;
   }

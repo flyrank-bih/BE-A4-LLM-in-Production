@@ -512,6 +512,10 @@
               "$ref": "#/components/schemas/QuizQuestion"
             }
           },
+          "provider": {
+            "type": "string",
+            "example": "gemini"
+          },
           "model": {
             "type": "string",
             "example": "gemini-3.5-flash"
@@ -525,6 +529,10 @@
           "prompt": {
             "type": "string",
             "example": "Generate one trivia question about JavaScript."
+          },
+          "provider": {
+            "type": "string",
+            "example": "gemini"
           },
           "model": {
             "type": "string",
