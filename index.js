@@ -1,9 +1,11 @@
 // Task API — Express CRUD server for tasks, backed by SQLite.
 // Stages 0–5 of the W3 assignment, plus the optional extras.
+require('dotenv').config({ quiet: true });
 const express = require('express');
 const Database = require('better-sqlite3'); // sync SQLite driver (no async/await needed)
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./openapi.json');
+const { generateText } = require('./services/ai');
 const app = express();
 const port = 3000;
 
@@ -84,12 +86,27 @@ app.get('/', (req, res) => {
   res.json({
     name: 'Task API',
     version: '1.0',
-    endpoints: ['/tasks', '/stats', '/reset'],
+    endpoints: ['/tasks', '/stats', '/reset', '/trivia/question'],
   });
 });
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// ---------------------------------------------------------------------------
+// Trivia — prove the API → AI service → Gemini → response path.
+// ---------------------------------------------------------------------------
+app.get('/trivia/question', async (req, res) => {
+  const prompt = 'Generate one trivia question about JavaScript.';
+
+  try {
+    const { model, text } = await generateText(prompt);
+    res.json({ prompt, model, text });
+  } catch (err) {
+    const status = err.status && err.status >= 400 && err.status < 600 ? err.status : 502;
+    res.status(status).json({ error: err.message });
+  }
 });
 
 // Convert a SQLite row (done is 0/1) into the JSON shape the API returns.

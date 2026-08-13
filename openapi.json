@@ -249,6 +249,48 @@
         }
       }
     },
+    "/trivia/question": {
+      "get": {
+        "summary": "Generate one JavaScript trivia question",
+        "operationId": "getTriviaQuestion",
+        "description": "Sends a fixed prompt to Gemini and returns the model text. Used to prove the AI provider connection.",
+        "responses": {
+          "200": {
+            "description": "Gemini generated a trivia question",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriviaQuestion"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server is missing Gemini configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "GEMINI_API_KEY is not set"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Gemini request failed or returned an empty response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reset": {
       "post": {
         "summary": "Reset to seed data",
@@ -329,6 +371,24 @@
         "properties": {
           "error": {
             "type": "string"
+          }
+        }
+      },
+      "TriviaQuestion": {
+        "type": "object",
+        "required": ["prompt", "model", "text"],
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "example": "Generate one trivia question about JavaScript."
+          },
+          "model": {
+            "type": "string",
+            "example": "gemini-3.5-flash"
+          },
+          "text": {
+            "type": "string",
+            "example": "What keyword declares a block-scoped variable in JavaScript?"
           }
         }
       },

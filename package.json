@@ -20,6 +20,7 @@
   "homepage": "https://github.com/flyrank-bih/internship-CRUD-API#readme",
   "dependencies": {
     "better-sqlite3": "^13.0.1",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "swagger-ui-express": "^5.0.1"
   }
